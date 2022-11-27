@@ -4,8 +4,8 @@ import 'source-map-support/register'
 import { verify, decode } from 'jsonwebtoken'
 import { createLogger } from '../../utils/logger'
 import Axios from 'axios'
-import { Jwt } from '../../auth/Jwt'
 import { JwtPayload } from '../../auth/JwtPayload'
+import { JwtToken } from '../../auth/JwtToken'
 
 const logger = createLogger('auth')
 
@@ -55,13 +55,25 @@ export const handler = async (
 }
 
 async function verifyToken(authHeader: string): Promise<JwtPayload> {
-  const token = getToken(authHeader)
-  const jwt: Jwt = decode(token, { complete: true }) as Jwt
+  if (!authHeader)
+  throw new Error('No authentication header')
 
-  // TODO: Implement token verification
-  // You should implement it similarly to how it was implemented for the exercise for the lesson 5
-  // You can read more about how to do this here: https://auth0.com/blog/navigating-rs256-and-jwks/
-  return undefined
+if (!authHeader.toLowerCase().startsWith('bearer '))
+  throw new Error('Invalid authentication header')
+
+const split = authHeader.split(' ')
+const token = split[1];
+
+let certInfo: string;
+try {
+  const res = await Axios.get(jwksUrl);
+  const data = res['data']['keys'][0]['x5c'][0];
+  certInfo = `-----BEGIN CERTIFICATE-----\n${data}\n-----END CERTIFICATE-----`;
+} catch (err) {
+  logger.error('Can\'t fetch Auth certificate. Error: ', err);
+}
+
+return verify(token, certInfo, { algorithms: ['RS256']}) as JwtToken;
 }
 
 function getToken(authHeader: string): string {
