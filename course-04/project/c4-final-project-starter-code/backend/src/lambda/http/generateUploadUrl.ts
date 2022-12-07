@@ -21,6 +21,10 @@ export const handler = middy(
     logger.info('Upload url: %s', uploadUrl);
 
     return {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true
+      },
       statusCode: 202,
       body: JSON.stringify({
         uploadUrl

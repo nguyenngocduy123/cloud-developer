@@ -1,23 +1,30 @@
 import 'source-map-support/register'
+
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
 import * as middy from 'middy'
 import { cors, httpErrorHandler } from 'middy/middlewares'
-import { getUserId } from '../utils'
-import { getTodos } from '../../helpers/todos'
+
+import { createLogger } from '../../utils/logger';
+import { getUserId } from '../../auth/utils'
+import { updateTodoAttachment } from '../../helpers/todos';
+
+const logger = createLogger('Update Todo')
 
 export const handler = middy(
   async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+    logger.info('Starting update todo attachment', event);
+    const todoId = event.pathParameters.todoId;
     const userId: string = getUserId(event);
-    const items = await getTodos(userId);
+    const updatedItem = await updateTodoAttachment(userId, todoId);
 
     return {
-      statusCode: 200,
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Credentials': true
       },
+      statusCode: 200,
       body: JSON.stringify({
-        items
+        item: updatedItem
       })
     }
   }
@@ -25,11 +32,9 @@ export const handler = middy(
 
 handler
   .use(httpErrorHandler())
-  .use(
-    cors(
-      {
-        origin: "*",
-        credentials: true,
-      }
-    )
-  )
+  .use(cors(
+    {
+      origin: "*",
+      credentials: true,
+    }
+  ))

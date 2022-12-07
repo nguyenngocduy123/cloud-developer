@@ -18,12 +18,12 @@ export async function updateTodo(userId: string, id: string, payload: UpdateTodo
   return todoAccess.updateTodo(userId, id, payload);
 }
 
-export async function updateTodoAttachment(userId: string, id: string): Promise<void> {
-  return todoAccess.updateTodoAttachment(userId, id);
+export async function updateTodoAttachment(userId: string, todoId: string): Promise<void> {
+  return todoAccess.updateTodoAttachment(userId, todoId);
 }
 
-export async function deleteTodo(userId: string, id: string): Promise<void> {
-  return todoAccess.deleteTodo(userId, id);
+export async function deleteTodo(todoId: string, userId: string): Promise<void> {
+  await todoAccess.deleteTodo(todoId, userId)
 }
 
 export async function createTodo(

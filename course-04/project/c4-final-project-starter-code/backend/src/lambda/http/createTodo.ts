@@ -4,8 +4,8 @@ import * as middy from 'middy'
 import { cors } from 'middy/middlewares'
 import { CreateTodoRequest } from '../../requests/CreateTodoRequest'
 import { getUserId } from '../utils';
-import { createTodo } from '../../businessLogic/todos'
 import { createLogger } from '../../utils/logger';
+import { createTodo } from '../../helpers/todos'
 
 const logger = createLogger('TodosAccess')
 
@@ -18,11 +18,16 @@ export const handler = middy(
     const todo = await createTodo(newTodo, userId);
 
     return {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true
+      },
       statusCode: 201,
       body: JSON.stringify({
         item: todo
       })
     }
+  }
 )
 
 handler.use(

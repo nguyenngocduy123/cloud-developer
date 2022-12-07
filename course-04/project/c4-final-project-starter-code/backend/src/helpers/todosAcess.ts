@@ -1,9 +1,8 @@
 import * as AWS from 'aws-sdk'
-import * as AWSXRay from 'aws-xray-sdk'
+const AWSXRay = require('aws-xray-sdk');
 import { DocumentClient } from 'aws-sdk/clients/dynamodb'
 import { createLogger } from '../utils/logger'
 import { TodoItem } from '../models/TodoItem'
-import { TodoUpdate } from '../models/TodoUpdate';
 import { UpdateTodoRequest } from '../requests/UpdateTodoRequest'
 
 const XAWS = AWSXRay.captureAWS(AWS)
@@ -53,16 +52,18 @@ export class TodoAccess {
       return todo;
     }
   
-    async deleteTodo(userId: string, id: string): Promise<void> {
-      await this.dbContext.delete({
-        TableName: this.todoTable,
-        Key: {
-          id,
-          userId
-        }
-      }).promise();
-  
-      return;
+    async deleteTodo(todoId: string, userId: string): Promise<void> {
+      try {
+        await this.dbContext.delete({
+          TableName: this.todoTable,
+          Key: {
+            todoId,
+            userId
+          }
+        }).promise()
+      } catch (err) {
+        createLogger(`Error while deleting document: ${err}`)
+      }
     }
   
     async updateTodo(userId: string, id: string, todo: UpdateTodoRequest): Promise<void> {
@@ -83,14 +84,14 @@ export class TodoAccess {
       return;
     }
     
-    async updateTodoAttachment(userId: string, id: string): Promise<void> {
+    async updateTodoAttachment(userId: string, todoId: string): Promise<void> {
       await this.dbContext.update({
         TableName: this.todoTable,
-        Key: { id, userId },
+        Key: { todoId, userId },
         UpdateExpression: 'set #attachmentUrl = :attachmentUrl',
         ExpressionAttributeNames: { '#attachmentUrl': 'attachmentUrl' },
         ExpressionAttributeValues: {
-          ':attachmentUrl': `https://${this.attachmentBucket}.s3.amazonaws.com/${id}`
+          ':attachmentUrl': `https://${this.attachmentBucket}.s3.amazonaws.com/${todoId}`
         },
         ReturnValues: "UPDATED_NEW"
       }).promise();

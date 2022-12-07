@@ -1,23 +1,22 @@
-import { CustomAuthorizerEvent, CustomAuthorizerResult } from 'aws-lambda'
+import {  CustomAuthorizerEvent, CustomAuthorizerResult } from 'aws-lambda'
 import 'source-map-support/register'
-
-import { verify, decode } from 'jsonwebtoken'
+import { decode, Jwt, verify } from 'jsonwebtoken'
 import { createLogger } from '../../utils/logger'
 import Axios from 'axios'
 import { JwtPayload } from '../../auth/JwtPayload'
-import { JwtToken } from '../../auth/JwtToken'
 
 const logger = createLogger('auth')
 
 // TODO: Provide a URL that can be used to download a certificate that can be used
 // to verify JWT token signature.
-// To get this URL you need to go to an Auth0 page -> Show Advanced Settings -> Endpoints -> JSON Web Key Set
-const jwksUrl = '...'
+// To get this URL you need to go to an Auth0 page -> Show   Settings -> Endpoints -> JSON Web Key Set
+const jwksUrl = 'https://dev-hm0fzlge8sksqlhc.us.auth0.com/.well-known/jwks.json'
 
 export const handler = async (
   event: CustomAuthorizerEvent
 ): Promise<CustomAuthorizerResult> => {
-  logger.info('Authorizing a user', event.authorizationToken)
+  logger.info(jwksUrl)
+  logger.info(event.authorizationToken)
   try {
     const jwtToken = await verifyToken(event.authorizationToken)
     logger.info('User was authorized', jwtToken)
@@ -55,25 +54,48 @@ export const handler = async (
 }
 
 async function verifyToken(authHeader: string): Promise<JwtPayload> {
-  if (!authHeader)
-  throw new Error('No authentication header')
+  const token = getToken(authHeader)
+  const jwt: Jwt = decode(token, { complete: true }) as Jwt
 
-if (!authHeader.toLowerCase().startsWith('bearer '))
-  throw new Error('Invalid authentication header')
+  let res = await Axios.get(jwksUrl, {
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': "*",
+      'Access-Control-Allow-Credentials': true,
+    }
+  });
+  let key = await getSigningKey(res.data.keys, jwt.header.kid);
 
-const split = authHeader.split(' ')
-const token = split[1];
-
-let certInfo: string;
-try {
-  const res = await Axios.get(jwksUrl);
-  const data = res['data']['keys'][0]['x5c'][0];
-  certInfo = `-----BEGIN CERTIFICATE-----\n${data}\n-----END CERTIFICATE-----`;
-} catch (err) {
-  logger.error('Can\'t fetch Auth certificate. Error: ', err);
+  return verify(token, key.publicKey, { algorithms: ['RS256'] }) as JwtPayload
 }
 
-return verify(token, certInfo, { algorithms: ['RS256']}) as JwtToken;
+const getSigningKey = async (keys, kid) => {
+  logger.info('keys', keys)
+  logger.info('kid', kid)
+  const signingKeys = keys.filter(key => key.use === 'sig' // JWK property `use` determines the JWK is for signing
+      && key.kty === 'RSA' // We are only supporting RSA
+      && key.kid           // The `kid` must be present to be useful for later
+      && key.x5c && key.x5c.length // Has useful public keys (we aren't using n or e)
+    ).map(key => {
+      return { kid: key.kid, nbf: key.nbf, publicKey: certToPEM(key.x5c[0]) };
+    });
+  logger.info('signingKey1', signingKeys)
+  const signingKey = signingKeys.find(key => key.kid === kid);
+  logger.info('signingKey2', signingKey)
+  if(!signingKey){
+    logger.error("No signing keys found")
+    throw new Error('Invalid signing keys')
+  }
+  logger.info("Signing keys created successfully ", signingKey)
+
+  return signingKey
+};
+
+const certToPEM = (cert) => {
+  cert = cert.match(/.{1,64}/g).join('\n');
+  cert = `-----BEGIN CERTIFICATE-----\n${cert}\n-----END CERTIFICATE-----\n`;
+  return cert;
 }
 
 function getToken(authHeader: string): string {
