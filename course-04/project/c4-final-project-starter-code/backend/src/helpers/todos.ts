@@ -14,17 +14,20 @@ export async function getTodo(userId: string, todoId: string): Promise<TodoItem>
   return todoAccess.getTodo(userId, todoId);
 }
 
-export async function updateTodo(userId: string, id: string, payload: UpdateTodoRequest) : Promise<void>{
-  return todoAccess.updateTodo(userId, id, payload);
+export async function updateTodo(userId: string, todoId: string, payload: UpdateTodoRequest) : Promise<void>{
+  return todoAccess.updateTodo(userId, todoId, payload);
 }
 
-export async function updateTodoAttachment(userId: string, todoId: string): Promise<void> {
-  return todoAccess.updateTodoAttachment(userId, todoId);
+export async function addAttachmentUrl(bucketName, todoId, userId) {
+  const attachmentUrl = `https://${bucketName}.s3.amazonaws.com/${todoId}`
+
+  await todoAccess.updateTodoAttachment(userId, todoId , attachmentUrl)
 }
 
 export async function deleteTodo(todoId: string, userId: string): Promise<void> {
   await todoAccess.deleteTodo(todoId, userId)
 }
+
 
 export async function createTodo(
   createTodoRequest: CreateTodoRequest,
@@ -42,6 +45,6 @@ export async function createTodo(
   })
 }
 
-export async function todoExists(id: string): Promise<boolean> {
-  return await todoAccess.todoExists(id);
+export async function todoExists(todoId: string, userId: string): Promise<boolean> {
+  return await todoAccess.todoExists(todoId, userId);
 }

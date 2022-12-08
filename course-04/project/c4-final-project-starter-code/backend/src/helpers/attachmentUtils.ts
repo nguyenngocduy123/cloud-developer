@@ -1,5 +1,6 @@
 import * as AWS from 'aws-sdk';
 import { createLogger } from '../utils/logger';
+import { addAttachmentUrl } from './todos';
 
 const logger = createLogger('S3 Attachment')
 
@@ -8,32 +9,21 @@ const s3 = new AWS.S3({
 });
 
 const bucketName = process.env.ATTACHMENT_S3_BUCKET;
-const urlExpiration = process.env.SIGNED_URL_EXPIRATION;
+const urlExpiration: number = 300;
 
-export function createAttachmentPresignedUrl(todoId: string): string {
-  return s3.getSignedUrl('putObject', {
+export async function createAttachmentPresignedUrl(todoId: string, userId: string) {
+  logger.info(`creating upload url for todo ${todoId} on bucket ${bucketName} with expiration ${urlExpiration}`)
+
+  const signedUrl = s3.getSignedUrl('putObject', {
     Bucket: bucketName,
     Key: todoId,
-    Expires: parseInt(urlExpiration)
+    Expires: urlExpiration
   })
+
+  logger.info(`return signedUrl ${signedUrl}`)
+  if (signedUrl) {
+    await addAttachmentUrl(bucketName, todoId, userId)
+    return signedUrl
+  }
 }
     
-export async function removeAttachment(id: string): Promise<void> {
-  const params = {
-    Bucket: bucketName,
-    Key: id
-  }
-  try {
-    await s3.headObject(params).promise()
-    logger.info("File Found in S3")
-    try {
-      await s3.deleteObject(params).promise()
-      logger.info("file deleted Successfully")
-    }
-    catch (err) {
-      logger.error("ERROR in file Deleting : " + JSON.stringify(err))
-    }
-  } catch (err) {
-    logger.error("File not Found ERROR : " + err.code)
-  }
-}

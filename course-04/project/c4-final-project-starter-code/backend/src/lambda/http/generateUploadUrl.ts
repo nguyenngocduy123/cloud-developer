@@ -9,16 +9,19 @@ import { cors, httpErrorHandler } from 'middy/middlewares';
 
 import { createLogger } from '../../utils/logger';
 import { createAttachmentPresignedUrl } from '../../helpers/attachmentUtils';
+import { getUserId } from '../utils';
 
 const logger = createLogger('attachment');
 
 export const handler = middy(
   async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+
+    const userId = getUserId(event)
     const todoId = event.pathParameters.todoId
     logger.info('Processing event: ', event);
-    const uploadUrl = createAttachmentPresignedUrl(todoId);
+    const uploadUrl = await createAttachmentPresignedUrl(todoId, userId);
 
-    logger.info('Upload url: %s', uploadUrl);
+    logger.info(`Upload url: ${uploadUrl}`);
 
     return {
       headers: {

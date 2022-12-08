@@ -12,8 +12,7 @@ const logger = createLogger('TodosAccess')
 export class TodoAccess {
     constructor(
       private readonly dbContext: DocumentClient = createDbContext(),
-      private readonly todoTable = process.env.TODOS_TABLE,
-      private readonly attachmentBucket = process.env.ATTACHMENT_S3_BUCKET) {
+      private readonly todoTable = process.env.TODOS_TABLE) {
     }
   
     async getTodosForUser(userId: string): Promise<TodoItem[]> {
@@ -66,43 +65,53 @@ export class TodoAccess {
       }
     }
   
-    async updateTodo(userId: string, id: string, todo: UpdateTodoRequest): Promise<void> {
-      logger.info('Starting update todo: ', todo);
+    async updateTodo(userId: string, todoId: string, todo: UpdateTodoRequest): Promise<void> {
+      logger.info(`Starting update todo user: ${userId} -  todo: ${todoId}`);
       await this.dbContext.update({
         TableName: this.todoTable,
-        Key: { id, userId },
-        UpdateExpression: 'set #name = :updateName, #done = :doneStatus, #dueDate = :updateDueDate',
-        ExpressionAttributeNames: { '#name': 'name', '#done': 'done', '#dueDate': 'dueDate' },
-        ExpressionAttributeValues: {
-          ':updateName': todo.name,
-          ':doneStatus': todo.done,
-          ':updateDueDate': todo.dueDate,
+        Key: {
+          todoId,
+          userId
         },
-        ReturnValues: "UPDATED_NEW"
+        ExpressionAttributeNames: {
+          '#N': 'name'
+        },
+        UpdateExpression: 'SET #N = :name, dueDate = :dueDate, done = :done',
+        ExpressionAttributeValues: {
+          ':name': todo.name,
+          ':dueDate': todo.dueDate,
+          ':done': todo.done
+        },
       }).promise();
   
       return;
     }
     
-    async updateTodoAttachment(userId: string, todoId: string): Promise<void> {
+    async updateTodoAttachment(userId: string, todoId: string, attachmentUrl: string): Promise<void> {
+      logger.info(`Starting updateTodoAttachment todo: ${todoId} and attachmentUrl: ${attachmentUrl}`);
       await this.dbContext.update({
         TableName: this.todoTable,
-        Key: { todoId, userId },
-        UpdateExpression: 'set #attachmentUrl = :attachmentUrl',
-        ExpressionAttributeNames: { '#attachmentUrl': 'attachmentUrl' },
-        ExpressionAttributeValues: {
-          ':attachmentUrl': `https://${this.attachmentBucket}.s3.amazonaws.com/${todoId}`
+        Key: {
+          todoId,
+          userId
         },
-        ReturnValues: "UPDATED_NEW"
-      }).promise();
+        UpdateExpression: 'SET attachmentUrl = :attachment',
+        ExpressionAttributeValues: {
+          ':attachment': attachmentUrl
+        }
+      }).promise()
+
+      logger.info('Updated Attachment Successed')
     }
   
-    async todoExists(id: string): Promise<boolean> {
+    async todoExists(todoId: string, userId: string): Promise<boolean> {
+      
       const result = await this.dbContext
         .get({
           TableName: this.todoTable,
           Key: {
-            id
+            todoId,
+            userId
           }
         })
         .promise()
@@ -112,12 +121,5 @@ export class TodoAccess {
   }
   
   function createDbContext() {
-    if (process.env.IS_OFFLINE) {
-      return new XAWS.DynamoDB.DocumentClient({
-        region: 'localhost',
-        endpoint: 'http://localhost:8000'
-      })
-    }
-  
     return new XAWS.DynamoDB.DocumentClient()
   }

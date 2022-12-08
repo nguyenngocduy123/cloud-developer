@@ -9,13 +9,17 @@ import { deleteTodo, todoExists } from '../../helpers/todos'
 
 export const handler = middy(
   async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-    createLogger(`Delete todo event: ${event}`)
+    const logger = createLogger(`Delete todo event: ${event}`)
+    logger.info(`start delete ${event.pathParameters.todoId}`)
 
     const todoId = event.pathParameters.todoId
     // Remove a TODO item by id
+    logger.info(`get user id`)
     const userId = getUserId(event)
-    const validTodo = await todoExists(todoId)
-
+    logger.info(`end get user id: ${userId}`)
+    logger.info(`get todo id: ${todoId}`)
+    const validTodo = await todoExists(todoId, userId)
+    logger.info(`end get todo id: ${validTodo}`)
     if (!validTodo) {
       return {
         statusCode: 404,
@@ -28,7 +32,7 @@ export const handler = middy(
         })
       }
     }
-
+    
     await deleteTodo(todoId, userId)
 
     return {

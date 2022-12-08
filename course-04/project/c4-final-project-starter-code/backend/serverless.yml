@@ -110,14 +110,17 @@ functions:
           cors: true
           authorizer:
             name: Auth
+          request:
+            schema:
+              application/json: ${file(models/update-todo-model.json)}
     iamRoleStatementsInherit: true
     iamRoleStatements:
       - Effect: Allow
         Action:
+          - dynamodb:GetItem
           - dynamodb:UpdateItem
-        Resource: !GetAtt TodosTable.Arn
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
 
-  # TODO: Configure this function
   # Provide property for setting up CORS, Authorizer, iamRoleStatements
   DeleteTodo:
     handler: src/lambda/http/deleteTodo.handler
@@ -126,12 +129,15 @@ functions:
           method: delete
           path: todos/{todoId}
           cors: true
+          authorizer:
+            name: Auth
     iamRoleStatementsInherit: true
     iamRoleStatements:
       - Effect: Allow
         Action:
+          - dynamodb:GetItem
           - dynamodb:DeleteItem
-        Resource: !GetAtt TodosTable.Arn
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
 
   # TODO: Configure this function
   # Provide property for setting up CORS, Authorizer, iamRoleStatements
@@ -142,13 +148,19 @@ functions:
           method: post
           path: todos/{todoId}/attachment
           cors: true
+          authorizer:
+            name: Auth
+    iamRoleStatementsInherit: true
     iamRoleStatements:
       - Effect: Allow
         Action:
           - s3:PutObject
           - s3:GetObject
-          - '*'
-        Resource: !GetAtt AttachmentsBucket.Arn
+        Resource: arn:aws:s3:::${self:provider.environment.ATTACHMENT_S3_BUCKET}/*
+      - Effect: Allow
+        Action:
+          - dynamodb:UpdateItem
+        Resource: !GetAtt TodosTable.Arn
 
 resources:
   Resources:
