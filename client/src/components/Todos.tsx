@@ -14,7 +14,7 @@ import {
   Loader
 } from 'semantic-ui-react'
 
-import { createTodo, deleteTodo, getTodos, patchTodo } from '../api/todos-api'
+import { createTodo, deleteTodo, filterTodo, getTodos, patchTodo } from '../api/todos-api'
 import Auth from '../auth/Auth'
 import { Todo } from '../types/Todo'
 
@@ -26,6 +26,7 @@ interface TodosProps {
 interface TodosState {
   todos: Todo[]
   newTodoName: string
+  filter: string
   loadingTodos: boolean
 }
 
@@ -33,11 +34,16 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
   state: TodosState = {
     todos: [],
     newTodoName: '',
-    loadingTodos: true
+    loadingTodos: true,
+    filter: ''
   }
 
   handleNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     this.setState({ newTodoName: event.target.value })
+  }
+
+  handleFilterChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    this.setState({ filter: event.target.value })
   }
 
   onEditButtonClick = (todoId: string) => {
@@ -57,6 +63,21 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
       })
     } catch {
       alert('Todo creation failed')
+    }
+  }
+
+  onFilter = async (event: React.ChangeEvent<HTMLButtonElement>) => {
+    try {
+      const result = await filterTodo(this.props.auth.getIdToken(), this.state.filter)
+      if (result){
+        this.setState({ todos: [result] })
+      }
+      else {
+        this.setState({ todos: [] })
+      }      
+    }
+    catch (error){
+      alert('Filter failed')
     }
   }
 
@@ -107,7 +128,7 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
         <Header as="h1">TODOs</Header>
 
         {this.renderCreateTodoInput()}
-
+        {this.renderSearhTodoInput()}
         {this.renderTodos()}
       </div>
     )
@@ -132,9 +153,35 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
           />
         </Grid.Column>
         <Grid.Column width={16}>
-          <Divider />
-        </Grid.Column>
+        <Divider />
+      </Grid.Column>
       </Grid.Row>
+    )
+  }
+
+  renderSearhTodoInput() {
+    console.log(`${this.state.filter}`)
+    return (
+      <Grid.Row>
+      <Grid.Column width={16}>
+        <Input
+          action={{
+            color: 'red',
+            labelPosition: 'left',
+            icon: 'search',
+            content: 'Filter task by name',
+            onClick: this.onFilter
+          }}
+          fluid
+          actionPosition="left"
+          placeholder="Filter task by name ..."
+          onChange={this.handleFilterChange}
+        />
+      </Grid.Column>
+      <Grid.Column width={16}>
+        <Divider />
+      </Grid.Column>
+    </Grid.Row>
     )
   }
 

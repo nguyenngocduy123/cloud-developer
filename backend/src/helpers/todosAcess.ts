@@ -118,6 +118,25 @@ export class TodoAccess {
     
       return !!result.Item
     }
+
+    async filterTodo(name: string, userId: string): Promise<TodoItem> {
+      logger.info(`ready filter: ${name} && userId: ${userId}`);
+      
+      const result = await this.dbContext.scan({
+        TableName: this.todoTable,
+        FilterExpression: "contains(#name, :name) and #userId = :userId ",
+        ExpressionAttributeNames: {
+          '#name': 'name',
+          '#userId': 'userId'
+        },
+        ExpressionAttributeValues: {
+          ":name" : name,
+          ":userId": userId
+        }       
+      }).promise()
+      logger.info(`result: ${JSON.stringify(result?.Items)}`);
+      return result?.Items?.shift() as TodoItem;
+    }
   }
   
   function createDbContext() {

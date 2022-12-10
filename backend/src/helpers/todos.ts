@@ -14,6 +14,10 @@ export async function getTodo(userId: string, todoId: string): Promise<TodoItem>
   return todoAccess.getTodo(userId, todoId);
 }
 
+export async function filterTodo(name: string, userId: string): Promise<TodoItem> {
+  return todoAccess.filterTodo(name, userId);
+}
+
 export async function updateTodo(userId: string, todoId: string, payload: UpdateTodoRequest) : Promise<void>{
   return todoAccess.updateTodo(userId, todoId, payload);
 }
