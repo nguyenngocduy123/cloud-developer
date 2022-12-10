@@ -12,6 +12,18 @@ const logger = createLogger('TodosAccess')
 export const handler = middy(
   async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     const newTodo: CreateTodoRequest = JSON.parse(event.body);
+
+    if (!newTodo?.name)
+    {
+      return {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Credentials': true
+        },
+        statusCode: 400,
+        body: 'Name is required'
+      }
+    }
     const userId: string = getUserId(event);
     logger.info('Starting create new todo!');
     
