@@ -79,6 +79,9 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
     catch (error){
       alert('Filter failed')
     }
+    finally{
+      this.setState({ filter: '' })
+    }
   }
 
   onTodoDelete = async (todoId: string) => {
@@ -172,6 +175,7 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
             content: 'Filter task by name',
             onClick: this.onFilter
           }}
+          value = {this.state.filter}
           fluid
           actionPosition="left"
           placeholder="Filter task by name ..."
